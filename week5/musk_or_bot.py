@@ -54,3 +54,75 @@ def generate_tweet(word_map, prefix_length):
     if word != None:
         tweet = tweet.strip() + '...'
     return tweet.strip()
+
+
+# The web app is below
+
+from flask import Flask, request, session
+from pyhtml import html, body, p, h1, form, input_
+
+app = Flask(__name__)
+
+app.config['SECRET_KEY'] = "correcthorsebatterystaple"
+
+@app.route('/', methods=['POST', 'GET'])
+def main_page():
+    result = ""
+    if not 'correct' in session:
+        session['correct'] = 0
+        session['total'] = 0
+
+    if request.method == 'POST':
+        if 'first_choice' in request.form:
+            tweet = session['first_tweet']
+        else:
+            tweet = session['second_tweet']
+
+        if tweet in elon_tweets:
+            result = "Correct"
+            session['correct'] = int(session['correct']) + 1
+        else:
+            result = "Incorrect"
+        session["total"] = int(session['total']) + 1
+
+        del session['first_tweet']
+        del session['second_tweet']
+    
+    if 'first_tweet' in session:
+        first_tweet = session['first_tweet']
+        second_tweet = session['second_tweet']
+    else:
+        fake_tweet = None
+        while fake_tweet == None or fake_tweet in elon_tweets:
+            fake_tweet = generate_tweet(word_map, prefix_length)
+        real_tweet = random.choice(elon_tweets)
+
+        if random.randint(0,1) == 0:
+            first_tweet = fake_tweet
+            second_tweet = real_tweet
+        else:
+            first_tweet = real_tweet
+            second_tweet = fake_tweet
+
+    session['first_tweet'] = first_tweet
+    session['second_tweet'] = second_tweet
+
+    choice_form = form(action='/')(
+        p(result),
+        p(first_tweet),
+        input_(type="submit", name="first_choice", value="This is the real tweet"),
+        p(second_tweet),
+        input_(type="submit", name="second_choice", value="This is the real tweet"),
+        p(str(session['correct']) + '/' + str(session['total']) + ' tweets correctly identified')
+    )
+
+    response = html(body(
+        h1("Musk or Bot"),
+        choice_form
+    ))
+    return str(response)
+
+if __name__ == "__main__":
+    prefix_length = 2
+    word_map = generate_word_map(prefix_length)
+    app.run(debug=True)

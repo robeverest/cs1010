@@ -59,7 +59,9 @@ def generate_tweet(word_map, prefix_length):
 # The web app is below
 
 from flask import Flask, request, session
-from pyhtml import html, body, p, h1, form, input_
+from pyhtml import html, body, p, h1, form, input_, link, head, div
+
+import csv
 
 app = Flask(__name__)
 
@@ -68,7 +70,8 @@ app.config['SECRET_KEY'] = "correcthorsebatterystaple"
 @app.route('/', methods=['POST', 'GET'])
 def main_page():
     result = ""
-    if not 'correct' in session:
+    if not 'id' in session:
+        session['id'] = random.randint(0,1000000000000)
         session['correct'] = 0
         session['total'] = 0
 
@@ -84,10 +87,12 @@ def main_page():
         else:
             result = "Incorrect"
         session["total"] = int(session['total']) + 1
-
+        
+        store_result(session['id'],session['first_tweet'], session['second_tweet'], tweet, result)
+        
         del session['first_tweet']
         del session['second_tweet']
-    
+
     if 'first_tweet' in session:
         first_tweet = session['first_tweet']
         second_tweet = session['second_tweet']
@@ -107,20 +112,38 @@ def main_page():
     session['first_tweet'] = first_tweet
     session['second_tweet'] = second_tweet
 
+    header = head(
+        link(rel="stylesheet", href="https://unpkg.com/purecss@2.0.5/build/pure-min.css", integrity="sha384-LTIDeidl25h2dPxrB2Ekgc9c7sEC3CWGM6HeFmuDNUjX76Ert4Z4IY714dhZHPLd", crossorigin="anonymous"),
+        link(rel="stylesheet", href="static/style.css"))
+    
     choice_form = form(action='/')(
+        # The result of the users last choice
         p(result),
-        p(first_tweet),
-        input_(type="submit", name="first_choice", value="This is the real tweet"),
-        p(second_tweet),
-        input_(type="submit", name="second_choice", value="This is the real tweet"),
+        # The first tweet
+        div(class_="tweet-container")(p(first_tweet)),
+        # The button to choose the first tweet
+        input_(type="submit", class_="pure-button pure-button-primary", name="first_choice", value="This is the real tweet"),
+        # The second tweet
+        div(class_="tweet-container")(p(second_tweet)),
+        # The button to choose the second tweet
+        input_(type="submit", class_="pure-button pure-button-primary", name="second_choice", value="This is the real tweet"),
+        # The number of tweets identified
         p(str(session['correct']) + '/' + str(session['total']) + ' tweets correctly identified')
     )
 
-    response = html(body(
-        h1("Musk or Bot"),
-        choice_form
-    ))
+    response = html(
+        header,
+        body(div(class_="content")(
+            h1("Musk or Bot"),
+            choice_form
+    )))
     return str(response)
+
+def store_result(id, first_tweet, second_tweet, chosen_tweet, result):
+    f = open('musk_or_bot.csv', 'a')
+    csv_writer = csv.writer(f)
+    csv_writer.writerow([id, first_tweet, second_tweet, chosen_tweet, result])
+    f.close()
 
 if __name__ == "__main__":
     prefix_length = 2

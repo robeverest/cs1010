@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import math
 
 pygame.init()
 
@@ -31,7 +32,11 @@ def generate_pipes():
     bottom_rect.bottom = height + random.randint(0, 300)
     bottom_rect.x = width + random.randint(0, 30)
 
-    return bottom_rect
+    top_rect = top_pipe.get_rect().copy()
+    top_rect.bottom = bottom_rect.top - 200
+    top_rect.x = bottom_rect.x
+
+    return (bottom_rect, top_rect)
 
 pipe_rects = [generate_pipes()]
 
@@ -45,13 +50,13 @@ while True:
             sys.exit()
     keys = pygame.key.get_pressed()
 
-    acceleration.y = 1
+    acceleration.y = 0.5
     
     if keys[pygame.K_SPACE]:
         if state == "start":
             state = "playing"  
         elif state == "playing":
-            acceleration.y = -1
+            acceleration.y = -0.5
         elif state == "dead":
             frankie_rect.center = pygame.math.Vector2(60,300)
             acceleration = pygame.math.Vector2(0,0)
@@ -62,11 +67,14 @@ while True:
     if state == "playing":
         velocity += acceleration
         frankie_rect = frankie_rect.move(velocity)
-        for pipe in pipe_rects:
-            pipe.x -= 1
-            if frankie_rect.colliderect(pipe):
+        for bottom_rect, top_rect in pipe_rects:
+            bottom_rect.x -= 2
+            top_rect.x -= 2
+            bottom_rect.top = height/2 + 100*math.sin(pygame.time.get_ticks()/1000)
+            top_rect.bottom = bottom_rect.top - 200
+            if frankie_rect.colliderect(bottom_rect) or frankie_rect.colliderect(top_rect):
                 state = "dead"
-        if pipe_rects[-1].centerx <= width/2:
+        if pipe_rects[-1][0].centerx <= width/2:
             pipe_rects.append(generate_pipes())
         
 
@@ -74,7 +82,8 @@ while True:
 
     screen.blit(frankie, frankie_rect)
 
-    for pipe in pipe_rects:
-        screen.blit(bottom_pipe, pipe)
+    for bottom_rect, top_rect in pipe_rects:
+        screen.blit(bottom_pipe, bottom_rect)
+        screen.blit(top_pipe, top_rect)
     pygame.display.flip()
     

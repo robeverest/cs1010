@@ -1,0 +1,5 @@
+{ 
+    "fridge": ["chiller", "door", "shelves"], 
+    "dishwasher": ["motor", "rack", "tube"], 
+    "vacuum": ["hose", "motor", "bag"]
+}
